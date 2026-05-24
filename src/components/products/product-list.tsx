@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/card";
 import { ApiError, useCreateReservation } from "@/hooks/use-reservation";
 import { useProducts, type ProductListItem } from "@/hooks/use-products";
-import { Box, MapPin, PackageOpen, ShoppingCart, Timer } from "lucide-react";
+import { Box, MapPin, ShoppingCart, Timer } from "lucide-react";
 
 function WarehouseStock({
   product,

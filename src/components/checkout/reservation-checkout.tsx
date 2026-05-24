@@ -19,7 +19,7 @@ import {
   useReleaseReservation,
   useReservation,
 } from "@/hooks/use-reservation";
-import { CheckCircle2, Clock, CreditCard, PackageX, ReceiptText, ShieldAlert, ShoppingBag, XCircle } from "lucide-react";
+import { CheckCircle2, Clock, CreditCard, PackageX, ShieldAlert, ShoppingBag, XCircle } from "lucide-react";
 
 function formatCountdown(ms: number) {
   if (ms <= 0) return "00:00";
