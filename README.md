@@ -6,7 +6,7 @@ Built for the **Allo Health Engineering take-home exercise**.
 
 ## Live demo
 
-Deploy to Vercel and set environment variables (see below). Seed the database before sharing the URL.
+🚀 **Live Application:** [https://inventory-reserve.onrender.com/products](https://inventory-reserve.onrender.com/products)
 
 ## Tech stack
 
