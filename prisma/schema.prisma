@@ -1,0 +1,124 @@
+// Inventory Reservation System — Phase 2 schema
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// -----------------------------------------------------------------------------
+// Enums
+// -----------------------------------------------------------------------------
+
+/// Lifecycle of a checkout hold (10-minute TTL while PENDING).
+enum ReservationStatus {
+  PENDING   // Stock is reserved; awaiting payment
+  CONFIRMED // Payment succeeded; stock permanently reduced
+  RELEASED  // User cancelled or payment failed; stock returned
+  EXPIRED   // TTL elapsed; stock returned by cleanup job
+}
+
+// -----------------------------------------------------------------------------
+// Core catalog
+// -----------------------------------------------------------------------------
+
+model Product {
+  id          String   @id @default(uuid()) @db.Uuid
+  sku         String   @unique
+  name        String
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  inventories  Inventory[]
+  reservations Reservation[]
+
+  @@map("products")
+}
+
+model Warehouse {
+  id        String   @id @default(uuid()) @db.Uuid
+  code      String   @unique
+  name      String
+  region    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  inventories  Inventory[]
+  reservations Reservation[]
+
+  @@map("warehouses")
+}
+
+// -----------------------------------------------------------------------------
+// Stock per product × warehouse (concurrency-sensitive row in Phase 4)
+// -----------------------------------------------------------------------------
+
+/// One row = how much stock exists at a warehouse for a product.
+///
+/// onHand   = physical units in the building
+/// reserved = units held by PENDING reservations
+/// available (computed) = onHand - reserved
+model Inventory {
+  id          String @id @default(uuid()) @db.Uuid
+  productId   String @db.Uuid
+  warehouseId String @db.Uuid
+  onHand      Int
+  reserved    Int    @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Cascade)
+
+  @@unique([productId, warehouseId])
+  @@index([productId])
+  @@index([warehouseId])
+  @@map("inventories")
+}
+
+// -----------------------------------------------------------------------------
+// Temporary checkout hold
+// -----------------------------------------------------------------------------
+
+model Reservation {
+  id             String            @id @default(uuid()) @db.Uuid
+  productId      String            @db.Uuid
+  warehouseId    String            @db.Uuid
+  quantity       Int
+  status         ReservationStatus @default(PENDING)
+  expiresAt      DateTime
+  idempotencyKey String?           @unique
+
+  confirmedAt DateTime?
+  releasedAt  DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Restrict)
+  warehouse Warehouse @relation(fields: [warehouseId], references: [id], onDelete: Restrict)
+
+  @@index([status, expiresAt])
+  @@index([productId, warehouseId, status])
+  @@map("reservations")
+}
+
+/// Cached API responses for Idempotency-Key header (bonus).
+model IdempotencyRecord {
+  key        String
+  scope      String
+  statusCode Int
+  body       Json
+  expiresAt  DateTime
+  createdAt  DateTime @default(now())
+
+  @@id([key, scope])
+  @@map("idempotency_records")
+}
